@@ -1,0 +1,260 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |				
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  8                                   	
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      snappyHexMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#includeEtc     "caseDicts/mesh/generation/snappyHexMeshDict.cfg"
+
+// Which of the steps to run
+castellatedMesh true;	// false
+snap            true;	// false
+addLayers       true;	// true
+
+geometry
+{
+    wing
+    {
+        type triSurfaceMesh;
+        file            "wing.stl";
+        regions
+        {
+			inside		{ name inside; }
+			trailing	{ name trailing; }
+			surface		{ name surface; }
+			outside		{ name outside; }
+        }
+    }
+
+    refinementBox 
+    { 
+        type searchableBox;
+        min ( -0.5 -0.75 -0.1 ); 
+        max (  2.5  0.50  0.1 ); 
+    }
+
+};
+
+// Settings for the castellatedMesh generation.
+castellatedMeshControls
+{
+
+    // Refinement parameters
+    // ~~~~~~~~~~~~~~~~~~~~~
+
+    maxLocalCells 500000;
+    maxGlobalCells 20000000;
+    minRefinementCells 10;
+    maxLoadUnbalance 0.10;
+    nCellsBetweenLevels 3;
+
+    // Explicit feature edge refinement
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    features
+    (
+        {
+            file "wing.eMesh";
+            //level 0;
+            //level 7;		// funziona		
+            level 7;		//Is equivalent to levels  ((0 8));	R
+            //levels ((8 8));	
+        }
+
+    );
+
+    // Surface based refinement
+    // ~~~~~~~~~~~~~~~~~~~~~~~~
+
+    refinementSurfaces
+    {
+        wing
+        {
+            level (0 0);	//level (6 6);
+			regions
+            {
+				inside		{ level (0 0); patchInfo { type wall; } }
+				trailing	{ level (6 6); patchInfo { type wall; } }
+				surface		{ level (6 6); patchInfo { type wall; } }
+				outside		{ level (6 6); patchInfo { type wall; } }
+		    }
+            /* funziona ma troppo pesante
+			regions
+            {
+				inside		{ level (0 0); patchInfo { type wall; } }
+				trailing	{ level (8 8); patchInfo { type wall; } }
+				surface		{ level (6 7); patchInfo { type wall; } }
+				outside		{ level (6 6); patchInfo { type wall; } }
+		    }
+            */
+        }
+            
+    }
+
+    // Resolve sharp angles
+    resolveFeatureAngle 5;	//5
+    //planarAngle 5;			//30
+
+    // Region-wise refinement
+    // ~~~~~~~~~~~~~~~~~~~~~~
+
+    refinementRegions
+    {
+    	/*
+		wing
+		{
+            mode distance;
+            levels ((0.2 4));		
+		}
+		*/
+        refinementBox
+        {
+            mode inside;
+            levels ((4 4));
+        }
+
+    }
+
+    // Mesh selection
+    // ~~~~~~~~~~~~~~
+
+    locationInMesh (3 -1 0);
+
+    allowFreeStandingZoneFaces true;//to remove in version 1.6-ext
+
+}
+
+// Settings for the snapping.
+snapControls
+{
+    nSmoothPatch 3;	//recommended	//2
+    //nSmoothPatch 10;	//improved
+
+    tolerance 2.0;	//recommended
+    //tolerance 1.0;
+
+    //nSolveIter 20;	//recommended
+    nSolveIter 50;	//improved
+
+    //nRelaxIter 5;	//recommended	//5
+    nRelaxIter 30;//15;	//improved	10-20-50
+
+    // Feature snapping
+
+        //nFeatureSnapIter 10;		//recommended
+        nFeatureSnapIter 20;//50;		//improved	50-100
+
+        implicitFeatureSnap false;
+
+        explicitFeatureSnap true;
+
+        multiRegionFeatureSnap false;
+}
+
+// Settings for the layer addition.
+addLayersControls
+{
+    layers
+    {
+        trailing // wing
+        {
+            nSurfaceLayers 4;	//3
+        }
+        surface
+        {
+            nSurfaceLayers 4;	//3
+        }        
+        outside
+        {
+            nSurfaceLayers 4;	//3
+        }
+    }
+    
+    relativeSizes   true;
+    expansionRatio  1.2;
+    finalLayerThickness 0.5;
+    minThickness    0.001;
+	nGrow 0;
+
+	//featureAngle 0;		//no inflation
+	//featureAngle 130;		//recommended
+	featureAngle 170;		//minimun value to avoid BL collapsing at edges
+	//featureAngle 270;		//Use this value to avoid BL colapsing in the edges of the hull
+		
+
+	maxFaceThicknessRatio 0.5; 
+	nSmoothSurfaceNormals 1;
+	nSmoothThickness 10;
+	minMedialAxisAngle 90;		//90-130
+	minMedianAxisAngle 90;		//90-130
+	maxThicknessToMedialRatio 0.3;     
+	nSmoothNormals 10;		//3 recommended 10 improved
+
+	//nMedialAxisIter  10;		//this deals with propagation of dislocations in corners
+	//nSmoothDisplacement  90;
+	//detectExtrusionIsland  true;
+
+	slipFeatureAngle 30;
+	nRelaxIter 10;			//5 recommended 10 improved
+	nBufferCellsNoExtrude 0;
+	nLayerIter 50;			//recommended
+	nRelaxedIter 20;		//recommended
+
+	additionalReporting true;	//*****
+}
+
+// Generic mesh quality settings. At any undoable phase these determine
+// where to undo.
+meshQualityControls
+{
+    // Specify mesh quality constraints in separate dictionary so can
+    // be reused (e.g. checkMesh -meshQuality)
+    #include "meshQualityDict"
+
+    // Advanced
+
+        // Number of error distribution iterations
+        nSmoothScale 4;
+        // amount to scale back displacement at error points
+        errorReduction 0.75;
+
+    //minFlatness 0.5;
+}
+
+// Advanced
+
+//// Debug flags
+/*
+debugFlags
+(
+    mesh            // write intermediate meshes
+    intersections   // write current mesh intersections as .obj files
+    featureSeeds    // write information about explicit feature edge
+                    // refinement
+    attraction      // write attraction as .obj files
+    layerInfo       // write information about layers
+);
+*/
+
+//// Write flags
+
+writeFlags
+(
+    scalarLevels    // write volScalarField with cellLevel for postprocessing
+    layerSets       // write cellSets, faceSets of faces in layer
+    layerFields     // write volScalarField for layer coverage
+);
+
+mergeTolerance 1e-6;
+
+// ************************************************************************* //

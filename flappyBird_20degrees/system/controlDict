@@ -1,0 +1,199 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |				
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  8                                   	
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      controlDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+application     simpleFoam;
+
+startFrom       latestTime;
+
+startTime       0;
+
+stopAt          endTime;
+
+endTime         1000;	//1000
+
+deltaT          1;
+
+writeControl    timeStep;
+
+writeInterval   1000;
+
+purgeWrite      4;
+
+writeFormat     binary;	//ascii-binary
+
+writePrecision  8;
+
+writeCompression off;
+
+timeFormat      general;
+
+timePrecision   6;
+
+runTimeModifiable true;
+
+// ************************************************************************* //
+
+functions
+{
+
+///////////////////////////////////////////////////////////////////////////
+
+forcesbody
+{
+    type forces;
+    functionObjectLibs ("libforces.so");
+
+    //outputControl outputTime;
+    writeControl   timeStep;
+    writeInterval  1;
+
+    //// Patches to sample
+    patches ("wing");
+
+    //// Name of fields
+    pName p;
+    Uname U;
+
+    //// Density
+    rho rhoInf;
+    rhoInf 1.225;
+
+    //// Centre of rotation
+    CofR (1.351 0.102 0);
+}
+
+///////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////
+
+	yplus
+    {
+    	type yPlus;
+    	functionObjectLibs ("libfieldFunctionObjects.so");
+    	enabled true;
+        writeControl outputTime;	//timeStep;
+		writeInterval 1;
+
+        log true;
+    }
+
+///////////////////////////////////////////////////////////////////////////
+
+
+///////////////////////////////////////////////////////////////////////////
+
+wallShearStress1
+{
+    type                wallShearStress;
+    functionObjectLibs  ("libutilityFunctionObjects.so");
+
+    enabled true;
+
+    writeControl outputTime;
+    //writeControl timeStep;
+    //writeInterval 1;
+
+    //log true;
+}
+
+///////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////
+
+Q
+{
+    type                Q;
+    functionObjectLibs  ("libutilityFunctionObjects.so");
+
+    enabled true;
+
+    writeControl outputTime;
+    //writeControl timeStep;
+    //writeInterval 1;
+
+    //log true;
+}
+
+///////////////////////////////////////////////////////////////////////////
+
+
+///////////////////////////////////////////////////////////////////////////
+
+    fieldAverage
+    {
+        type            fieldAverage;
+        functionObjectLibs ("libfieldFunctionObjects.so");
+        enabled         true;
+        writeControl   outputTime;
+
+	//writeControl   timeStep;
+	//writeInterval  100;
+
+	//cleanRestart true;
+
+	//timeStart       50;
+	//timeEnd         2000;
+
+        fields
+        (
+            U
+            {
+                mean        on;
+                prime2Mean  on;
+                base        time;
+            }
+
+            p
+            {
+                mean        on;
+                prime2Mean  on;
+                base        time;
+            }
+
+            nut
+            {
+                mean        on;
+                prime2Mean  on;
+                base        time;
+            }
+
+            k
+            {
+                mean        on;
+                prime2Mean  off;
+                base        time;
+            }
+
+            epsilon
+            {
+                mean        on;
+                prime2Mean  off;
+                base        time;
+            }
+
+            Q
+            {
+                mean        on;
+                prime2Mean  off;
+                base        time;
+            }
+
+        );
+    }
+
+///////////////////////////////////////////////////////////////////////////
+
+};
